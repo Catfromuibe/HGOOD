@@ -1,0 +1,1 @@
+python main.py -exp_type ad -DS Tox21_PPAR-gamma -num_epoch 40 -num_cluster 10 -alpha 0.8   seed:3 4 6

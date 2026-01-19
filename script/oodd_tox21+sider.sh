@@ -1,0 +1,1 @@
+python mian.py -exp_type oodd -DS_pair ogbg-moltox21+ogbg-molsider -batch_size_test 128 -num_epoch 160 -num_cluster 5 -alpha 0.2 seed:0 1

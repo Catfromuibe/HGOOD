@@ -49,26 +49,28 @@ def setup_seed(seed):
 
 def run_kmeans(x, args):
     results = {}
-
+    
     if np.isnan(x).any() or np.isinf(x).any():
         print("Warning: Input to run_kmeans contains NaNs or Infs. Replacing with 0.")
         x = np.nan_to_num(x)
-
+        
     d = x.shape[1]
     k = args.num_cluster
-
+    
     if x.shape[0] < k:
         k = x.shape[0]
         print(f"Warning: Number of samples ({x.shape[0]}) is less than num_cluster ({args.num_cluster}). Adjusting k to {k}.")
-
     clus = faiss.Clustering(d, k)
     clus.niter = 20
     clus.nredo = 5
     clus.seed = 0
     clus.max_points_per_centroid = 1000
     clus.min_points_per_centroid = 3
+    res = faiss.StandardGpuResources()
+    cfg = faiss.GpuIndexFlatConfig()
+    cfg.useFloat16 = False
     try:
-        index = faiss.IndexFlatL2(d)
+        index = faiss.GpuIndexFlatL2(res, d, cfg)
         clus.train(x, index)
     except:
         print('Fail to cluster with GPU. Try CPU...')
@@ -78,7 +80,6 @@ def run_kmeans(x, args):
     D, I = index.search(x, 1)
     im2cluster = [int(n[0]) for n in I]
     centroids = faiss.vector_to_array(clus.centroids).reshape(k, d)
- 
     Dcluster = [[] for c in range(k)]
     for im, i in enumerate(im2cluster):
         Dcluster[i].append(D[im][0])
@@ -115,14 +116,12 @@ def run_kmeans(x, args):
 
 
 def get_cluster_result(dataloader, model, args, use_hyper=False):
-
     model.eval()
     embeddings = torch.zeros((n_train, model.embedding_dim))
     for data in dataloader:
         with torch.no_grad():
             data = data.to(device)
             if use_hyper:
-                
                 _,hyper_b, _, _, _, _, _, _, _, _ = model(
                     data.x, data.x_s, data.edge_index, data.batch, data.num_graphs
                 )
@@ -131,7 +130,6 @@ def get_cluster_result(dataloader, model, args, use_hyper=False):
                
                 b = model.get_b(data.x, data.x_s, data.edge_index, data.batch, data.num_graphs)
                 embeddings[data.idx] = b.detach().cpu()
-    
     cluster_result = run_kmeans(embeddings.numpy(), args)
     return cluster_result
 def get_kmeans_cluster_result(data,ebdata,model, args):
@@ -157,7 +155,7 @@ if __name__ == '__main__':
     for trial in range(args.num_trial):
         setup_seed(trial)
         print(trial)
-
+        
         if args.exp_type == 'oodd':
             dataloader, dataloader_test, meta = get_ood_dataset(args)
         elif args.exp_type == 'ad' and not args.DS.startswith('Tox21'):
@@ -178,7 +176,7 @@ if __name__ == '__main__':
             print('================')
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model = HGOOD(args.hidden_dim, args.num_layer, args.num_gc_layer,dataset_num_features, args.dg_dim+args.rw_dim).to(device)
+        model = HCL(args.hidden_dim, args.num_layer, args.num_gc_layer,dataset_num_features, args.dg_dim+args.rw_dim).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         best_auc = 0.0
         best_model_state = None
@@ -186,16 +184,14 @@ if __name__ == '__main__':
             if args.is_adaptive:
                 if epoch == 1:
                     weight_b, weight_g, weight_n, weight_cross_modal = 1, 1, 1, 1
-                   
                 else:
                     weight_b, weight_g, weight_n, weight_cross_modal = std_b ** args.alpha, std_g ** args.alpha, std_n ** args.alpha,args.alpha
                     
                     weight_sum = (weight_b + weight_g + weight_n + weight_cross_modal) / 4
                     
                     weight_b, weight_g, weight_n, weight_cross_modal = weight_b/weight_sum, weight_g/weight_sum, weight_n/weight_sum, weight_cross_modal/weight_sum
-                    
             cluster_result_hyper = get_cluster_result(dataloader, model, args, use_hyper=True)
-
+            cluster_result_b = get_cluster_result(dataloader, model, args, use_hyper=False)
             model.train()
             loss_all = 0
             if args.is_adaptive:
@@ -208,7 +204,6 @@ if __name__ == '__main__':
                 b, hyper_b, g_f, g_s, n_f, n_s, g_hyper_f, g_hyper_s, n_hyper_f, n_hyper_s = model(
                     data.x, data.x_s, data.edge_index, data.batch, data.num_graphs
                 )
-
                 loss_g = model.calc_loss_g(g_f, g_s)
                 loss_b = model.calc_loss_b(b, data.idx, cluster_result_b) # Ablation: remove loss_b
                 loss_n = model.calc_loss_n(n_f, n_s, data.batch) 

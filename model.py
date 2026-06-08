@@ -7,7 +7,7 @@ import torch.nn as nn
 class HGOOD(nn.Module):
 
     def __init__(self, hidden_dim, num_gc_layers, num_hp_layers, feat_dim, str_dim):
-        super(HCL, self).__init__()  
+        super(HGOOD, self).__init__()  
 
         self.embedding_dim = hidden_dim * num_gc_layers 
         self.hidden_dim = hidden_dim  

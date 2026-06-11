@@ -112,7 +112,6 @@ HGOOD/                          ← Project root (this README)
     ├── main.py                 ← Training & evaluation entry point
     ├── model.py                ← HCL model, hypergraph encoder, losses, scoring
     ├── data_loader.py          ← Data loading, structural encoding, splits
-    ├── calcualte.py            ← Helper to aggregate AUROC across trials
     ├── Params.py               ← Legacy params (not used by main.py)
     ├── Utils/
     │   ├── Utils.py
@@ -273,7 +272,7 @@ All scripts live in `HGOOD/script/` and should be run from `HGOOD/HGOOD/`.
 | `oodd_BZR+COX2.sh` | BZR + COX2 | epoch=400, K=2, α=0 |
 | `oodd_PTC_MR+MUTAG.sh` | PTC_MR + MUTAG | epoch=400, K=5, α=0.4 |
 | `oodd_AIDS+DHFR.sh` | AIDS + DHFR | epoch=400, K=10, α=0.2 |
-| `oodd_ENZYMES+PROTEINS.sh` | ENZYMES + PROTEINS | ⚠ see Known Issues |
+| `oodd_ENZYMES+PROTEINS.sh` | ENZYMES + PROTEINS |  epoch=400, K=10, α=0.2 |
 | `oodd_IMDB-M+IMDB-B.sh` | IMDB-MULTI + IMDB-BINARY | epoch=20, K=5, α=0.9 |
 | `oodd_bbbp+bace.sh` | ogbg-molbbbp + ogbg-molbace | epoch=400, K=30, α=0.2 |
 | `oodd_tox21+sider.sh` | ogbg-moltox21 + ogbg-molsider | epoch=160, K=5, α=0.2 |
@@ -322,7 +321,6 @@ After `num_trial` runs, the top-3 best AUROC values (or all if fewer than 3) are
 [FINAL RESULT] AVG_AUC:0.xxxx+-0.xxxx
 ```
 
-Use `calcualte.py` to manually aggregate AUROC from recorded trials.
 
 ---
 
